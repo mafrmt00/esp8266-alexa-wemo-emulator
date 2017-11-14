@@ -2,6 +2,9 @@
 #include "WemoSwitch.h"
 #include <functional>
 
+#define WemoLibDebugPrint(X)	//Serial.print(X)
+#define WemoLibDebugPrintln(X)	//Serial.println(X)
+
 // Multicast declarations
 IPAddress ipMulti(239, 255, 255, 250);
 const unsigned int portMulti = 1900;
@@ -24,18 +27,18 @@ WemoManager::~WemoManager(){/*nothing to destruct*/}
 bool WemoManager::begin(){
   boolean state = false;
 
-  Serial.println("Begin multicast ..");
+  WemoLibDebugPrintln("Begin multicast ..");
 
   if(UDP.beginMulticast(WiFi.localIP(), ipMulti, portMulti)) {
-    Serial.print("Udp multicast server started at ");
-    Serial.print(ipMulti);
-    Serial.print(":");
-    Serial.println(portMulti);
+    WemoLibDebugPrint("Udp multicast server started at ");
+    WemoLibDebugPrint(ipMulti);
+    WemoLibDebugPrint(":");
+    WemoLibDebugPrintln(portMulti);
 
     state = true;
   }
   else{
-    Serial.println("Connection failed");
+    WemoLibDebugPrintln("Connection failed");
   }
 
   return state;
@@ -44,10 +47,10 @@ bool WemoManager::begin(){
 //Switch *ptrArray;
 
 void WemoManager::addDevice(WemoSwitch& device) {
-  Serial.print("Adding switch : ");
-  Serial.print(device.getAlexaInvokeName());
-  Serial.print(" index : ");
-  Serial.println(numOfSwitchs);
+  WemoLibDebugPrint("Adding switch : ");
+  WemoLibDebugPrint(device.getAlexaInvokeName());
+  WemoLibDebugPrint(" index : ");
+  WemoLibDebugPrintln(numOfSwitchs);
 
   switches[numOfSwitchs] = device;
   numOfSwitchs++;
@@ -66,12 +69,12 @@ void WemoManager::serverLoop(){
 
     // check if this is a M-SEARCH for WeMo device
     String request = String((char *)packetBuffer);
-    // Serial.println("----------");
-    // Serial.println(request);
-    // Serial.println("-----------");
+    // WemoLibDebugPrintln("----------");
+    // WemoLibDebugPrintln(request);
+    // WemoLibDebugPrintln("-----------");
     if(request.indexOf('M-SEARCH') > 0) {
         if((request.indexOf("urn:Belkin:device:**") > 0) || (request.indexOf("ssdp:all") > 0) || (request.indexOf("upnp:rootdevice") > 0)) {
-          Serial.println("Got UDP Belkin Request..");
+          WemoLibDebugPrintln("Got UDP Belkin Request..");
 
           // int arrSize = sizeof(switchs) / sizeof(Switch);
 

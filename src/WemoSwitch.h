@@ -16,6 +16,7 @@ private:
         String persistent_uuid;
         String device_name;
         unsigned int localPort;
+		bool bCurrentState;
         CallbackFunction onCallback;
         CallbackFunction offCallback;
 

@@ -1,11 +1,12 @@
 #include "WemoSwitch.h"
 #include "CallbackFunction.h"
 
-
+#define WemoLibDebugPrint(X)	//WemoLibDebugPrint(X)
+#define WemoLibDebugPrintln(X)	//WemoLibDebugPrintln(X)
 
 //<<constructor>>
 WemoSwitch::WemoSwitch(){
-    //Serial.println("default constructor called");
+    //WemoLibDebugPrintln("default constructor called");
 }
 //WemoSwitch::WemoSwitch(String alexaInvokeName,unsigned int port){
 WemoSwitch::WemoSwitch(String alexaInvokeName, unsigned int port, CallbackFunction oncb, CallbackFunction offcb){
@@ -23,7 +24,7 @@ WemoSwitch::WemoSwitch(String alexaInvokeName, unsigned int port, CallbackFuncti
     localPort = port;
     onCallback = oncb;
     offCallback = offcb;
-
+	bCurrentState = false;
     startWebServer();
 }
 
@@ -62,12 +63,12 @@ void WemoSwitch::startWebServer(){
   //server->onNotFound(handleNotFound);
   server->begin();
 
-  Serial.println("WebServer started on port: ");
-  Serial.println(localPort);
+  WemoLibDebugPrintln("WebServer started on port: ");
+  WemoLibDebugPrintln(localPort);
 }
 
 void WemoSwitch::handleEventservice(){
-  Serial.println(" ########## Responding to eventservice.xml ... ########\n");
+  WemoLibDebugPrintln(" ########## Responding to eventservice.xml ... ########\n");
 
   String eventservice_xml = "<scpd xmlns=\"urn:Belkin:service-1-0\">"
         "<actionList>"
@@ -102,49 +103,94 @@ void WemoSwitch::handleEventservice(){
 }
 
 void WemoSwitch::handleUpnpControl(){
-  Serial.println("########## Responding to  /upnp/control/basicevent1 ... ##########");
+  WemoLibDebugPrintln("########## Responding to  /upnp/control/basicevent1 ... ##########");
 
+  bool bRequestWasHandled = false;
+  
   //for (int x=0; x <= HTTP.args(); x++) {
-  //  Serial.println(HTTP.arg(x));
+  //  WemoLibDebugPrintln(HTTP.arg(x));
   //}
 
   String request = server->arg(0);
-  Serial.print("request:");
-  Serial.println(request);
+  
+  WemoLibDebugPrint("handleUpnpControl request:");
+  WemoLibDebugPrintln(request);
 
-  Serial.println("Responding to Control request");
+  WemoLibDebugPrintln("Responding to Control request");
 
   String response_xml = "";
 
-  if(request.indexOf("<BinaryState>1</BinaryState>") > 0) {
-      Serial.println("Got Turn on request");
-      onCallback();
-      response_xml =  "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">"
-                        "<s:Body>"
-                          "<u:SetBinaryStateResponse xmlns:u=\"urn:Belkin:service:basicevent:1\">"
-                            "<BinaryState>1</BinaryState>"
-                          "</u:SetBinaryStateResponse>"
-                        "</s:Body>"
-                      "</s:Envelope>\r\n"
-                      "\r\n";
-  }
+  //Set Request
+  if(request.indexOf("<u:SetBinaryState") > 0) {
+  
+	  if(request.indexOf("<BinaryState>1</BinaryState>") > 0) {
+		  WemoLibDebugPrintln("Got Turn on request");
+		  onCallback();
+		  bCurrentState = true;
+		  bRequestWasHandled = true;
+		  response_xml =  "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">"
+							"<s:Body>"
+							  "<u:SetBinaryStateResponse xmlns:u=\"urn:Belkin:service:basicevent:1\">"
+								"<BinaryState>1</BinaryState>"
+							  "</u:SetBinaryStateResponse>"
+							"</s:Body>"
+						  "</s:Envelope>\r\n"
+						  "\r\n";
+	  }
 
-  if(request.indexOf("<BinaryState>0</BinaryState>") > 0) {
-      Serial.println("Got Turn off request");
-      offCallback();
-      response_xml =  "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">"
-                        "<s:Body>"
-                          "<u:SetBinaryStateResponse xmlns:u=\"urn:Belkin:service:basicevent:1\">"
-                            "<BinaryState>0</BinaryState>"
-                          "</u:SetBinaryStateResponse>"
-                        "</s:Body>"
-                      "</s:Envelope>\r\n"
-                      "\r\n";
+	  if(request.indexOf("<BinaryState>0</BinaryState>") > 0) {
+		  WemoLibDebugPrintln("Got Turn off request");
+		  offCallback();
+		  bCurrentState = false;
+		  bRequestWasHandled = true;
+		  response_xml =  "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">"
+							"<s:Body>"
+							  "<u:SetBinaryStateResponse xmlns:u=\"urn:Belkin:service:basicevent:1\">"
+								"<BinaryState>0</BinaryState>"
+							  "</u:SetBinaryStateResponse>"
+							"</s:Body>"
+						  "</s:Envelope>\r\n"
+						  "\r\n";
+	  }
   }
+  
+  //Get Request
+  if(request.indexOf("<u:GetBinaryState") > 0) {
+  
+	  WemoLibDebugPrintln("Got Get request");
+	  bRequestWasHandled = true;
+	  if (bCurrentState) {
 
-  server->send(200, "text/xml", response_xml.c_str());
-  Serial.print("Sending :");
-  Serial.println(response_xml);
+		  response_xml =  "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">"
+							"<s:Body>"
+							  "<u:SetBinaryStateResponse xmlns:u=\"urn:Belkin:service:basicevent:1\">"
+								"<BinaryState>1</BinaryState>"
+							  "</u:SetBinaryStateResponse>"
+							"</s:Body>"
+						  "</s:Envelope>\r\n"
+						  "\r\n";
+	  }
+	  else {
+
+		  response_xml =  "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">"
+							"<s:Body>"
+							  "<u:SetBinaryStateResponse xmlns:u=\"urn:Belkin:service:basicevent:1\">"
+								"<BinaryState>0</BinaryState>"
+							  "</u:SetBinaryStateResponse>"
+							"</s:Body>"
+						  "</s:Envelope>\r\n"
+						  "\r\n";
+	  }
+  }  
+  
+  if (bRequestWasHandled) {
+	  server->send(200, "text/xml", response_xml.c_str());
+	  WemoLibDebugPrint("Sending :");
+	  WemoLibDebugPrintln(response_xml);
+  } 
+  else {
+	  WemoLibDebugPrintln("Error: handleUpnpControl unhandled request:");
+  }
 }
 
 void WemoSwitch::handleRoot(){
@@ -152,7 +198,7 @@ void WemoSwitch::handleRoot(){
 }
 
 void WemoSwitch::handleSetupXml(){
-  Serial.println(" ########## Responding to setup.xml ... ########\n");
+  WemoLibDebugPrintln(" ########## Responding to setup.xml ... ########\n");
 
   IPAddress localIP = WiFi.localIP();
   char s[16];
@@ -191,8 +237,8 @@ void WemoSwitch::handleSetupXml(){
 
     server->send(200, "text/xml", setup_xml.c_str());
 
-    Serial.print("Sending :");
-    Serial.println(setup_xml);
+    WemoLibDebugPrint("Sending :");
+    WemoLibDebugPrintln(setup_xml);
 }
 
 String WemoSwitch::getAlexaInvokeName() {
@@ -200,11 +246,11 @@ String WemoSwitch::getAlexaInvokeName() {
 }
 
 void WemoSwitch::respondToSearch(IPAddress& senderIP, unsigned int senderPort) {
-  Serial.println("");
-  Serial.print("Sending response to ");
-  Serial.println(senderIP);
-  Serial.print("Port : ");
-  Serial.println(senderPort);
+  WemoLibDebugPrintln("");
+  WemoLibDebugPrint("Sending response to ");
+  WemoLibDebugPrintln(senderIP);
+  WemoLibDebugPrint("Port : ");
+  WemoLibDebugPrintln(senderPort);
 
   IPAddress localIP = WiFi.localIP();
   char s[16];
@@ -227,5 +273,5 @@ void WemoSwitch::respondToSearch(IPAddress& senderIP, unsigned int senderPort) {
   UDP.write(response.c_str());
   UDP.endPacket();
 
-   Serial.println("Response sent !");
+   WemoLibDebugPrintln("Response sent !");
 }
