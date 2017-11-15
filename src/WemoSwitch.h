@@ -17,9 +17,11 @@ private:
         String device_name;
         unsigned int localPort;
 		bool bCurrentState;
+		StatusCallbackFunction StatusCallback;
         CallbackFunction onCallback;
         CallbackFunction offCallback;
 
+		void Init(unsigned int port);
         void startWebServer();
         void handleEventservice();
         void handleUpnpControl();
@@ -28,6 +30,7 @@ private:
 public:
         WemoSwitch();
         WemoSwitch(String alexaInvokeName, unsigned int port, CallbackFunction onCallback, CallbackFunction offCallback);
+		WemoSwitch(String alexaInvokeName, unsigned int port, CallbackFunction oncb, CallbackFunction offcb, StatusCallbackFunction statecb);
         ~WemoSwitch();
         String getAlexaInvokeName();
         void serverLoop();

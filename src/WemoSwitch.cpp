@@ -8,8 +8,35 @@
 WemoSwitch::WemoSwitch(){
     //WemoLibDebugPrintln("default constructor called");
 }
+
+WemoSwitch::WemoSwitch(String alexaInvokeName, unsigned int port, CallbackFunction oncb, CallbackFunction offcb, StatusCallbackFunction statecb){
+	Init(port);
+
+    device_name = alexaInvokeName;
+    localPort = port;
+    onCallback = oncb;
+    offCallback = offcb;
+	bCurrentState = false;
+	StatusCallback = statecb;
+    startWebServer();
+}
+
+
 //WemoSwitch::WemoSwitch(String alexaInvokeName,unsigned int port){
 WemoSwitch::WemoSwitch(String alexaInvokeName, unsigned int port, CallbackFunction oncb, CallbackFunction offcb){
+	Init(port);
+
+    device_name = alexaInvokeName;
+    localPort = port;
+    onCallback = oncb;
+    offCallback = offcb;
+	bCurrentState = false;
+	StatusCallback = nullptr;
+    startWebServer();
+}
+
+void WemoSwitch::Init(unsigned int port)
+{
     uint32_t uniqueSwitchId = ESP.getChipId() + port;
     char uuid[64];
     sprintf_P(uuid, PSTR("38323636-4558-4dda-9188-cda0e6%02x%02x%02x"),
@@ -18,17 +45,8 @@ WemoSwitch::WemoSwitch(String alexaInvokeName, unsigned int port, CallbackFuncti
           (uint16_t)   uniqueSwitchId        & 0xff);
 
     serial = String(uuid);
-    persistent_uuid = "Socket-1_0-" + serial+"-"+ String(port);
-
-    device_name = alexaInvokeName;
-    localPort = port;
-    onCallback = oncb;
-    offCallback = offcb;
-	bCurrentState = false;
-    startWebServer();
+    persistent_uuid = "Socket-1_0-" + serial+"-"+ String(port);	
 }
-
-
 
 //<<destructor>>
 WemoSwitch::~WemoSwitch(){/*nothing to destruct*/}
@@ -159,6 +177,10 @@ void WemoSwitch::handleUpnpControl(){
   
 	  WemoLibDebugPrintln("Got Get request");
 	  bRequestWasHandled = true;
+	  
+	  if (StatusCallback)
+		  bCurrentState = StatusCallback();
+	  
 	  if (bCurrentState) {
 
 		  response_xml =  "<s:Envelope xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" s:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">"
